@@ -1,0 +1,71 @@
+package com.spring.www.empleadosform1.repository;
+
+import com.spring.www.empleadosform1.entity.Employee;
+import com.spring.www.empleadosform1.utils.EmployeeProjection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+
+@Repository
+public interface EmployeesMainRepository extends JpaRepository<Employee, Long> {
+
+    @Query(
+            value = """
+                    SELECT
+                    	e.emp_no      	AS empNo,
+                    	e.birth_date    AS birthDate,
+                    	e.first_name    AS firstName,
+                    	e.last_name      AS lastName,
+                    	e.gender        AS gender,
+                    	e.hire_date     AS hireDate,
+                    	de.dept_no      AS deptNo,
+                    	de.from_date    AS fromDate,
+                    	de.to_date      AS toDate
+                    	FROM employees e LEFT JOIN dept_emp de
+                        ON e.emp_no = de.emp_no limit
+                        WHERE (:empNo     IS NULL OR e.emp_no = :empNo)
+                        AND (:birthDate   IS NULL OR e.birth_date = :birthDate)
+                        AND (:firstName   IS NULL OR e.first_name LIKE CONCAT('%', :firtsName, '%'))
+                        AND (:lastName    IS NULL OR e.last_name  LIKE CONCAT('%', :lastName, '%'))
+                        AND (:gender      IS NULL OR e.gender UPPER(TRIM(e.gender)) = UPPER(TRIM(:gender)))
+                        AND (:hireDate    IS NULL OR e.hire_date = :hireDate)
+                        AND (:deptNo      IS NULL OR de.dept_no = :detpNo)
+                        AND (:fromDate    IS NULL OR de.form_date >= :fromDate)
+                        AND (:toDate      IS NULL OR de.to_date <= :toDate)
+                    """,
+
+            countQuery = """
+                         SELECT COUNT(DISTINCT e.emp_no)
+                         FROM employees e 
+                         WHERE(:empNo IS NULL OR e.emp_no :empNo)
+                         AND (:birthDate   IS NULL OR e.birth_date = :birthDate)
+                        AND (:firstName   IS NULL OR e.first_name LIKE CONCAT('%', :firtsName, '%'))
+                        AND (:lastName    IS NULL OR e.last_name  LIKE CONCAT('%', :lastName, '%'))
+                        AND (:gender      IS NULL OR e.gender UPPER(TRIM(e.gender)) = UPPER(TRIM(:gender)))
+                        AND (:hireDate    IS NULL OR e.hire_date = :hireDate)
+                         """,
+
+            nativeQuery = true
+    )
+    Page<EmployeeProjection> buscarConFiltros(
+            @Param("empNo") Long depNo,
+            @Param("birthDate") LocalDate birthDateo,
+            @Param("firstName") String firstName,
+            @Param("lastName") String lastName,
+            @Param("gender") String gender,
+            @Param("hireDate") LocalDate hireDate,
+            @Param("deptNo") String deptNo,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate,
+            Pageable pageable
+    );
+
+    @Query(value = "SELECT COALESCE(MAX(emp_no)) FROM employees", nativeQuery = true)
+    long maxEmpNo();
+
+}
